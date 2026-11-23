@@ -1,9 +1,11 @@
 package com.cami.maratondoomsday.ui.screens
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,13 +13,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,15 +31,27 @@ import androidx.compose.ui.unit.sp
 import com.cami.maratondoomsday.data.DEFAULT_RULES
 import com.cami.maratondoomsday.domain.Formats
 import com.cami.maratondoomsday.ui.MarathonUi
+import com.cami.maratondoomsday.ui.hud.HudButton
+import com.cami.maratondoomsday.ui.hud.HudHeader
+import com.cami.maratondoomsday.ui.hud.HudPanel
+import com.cami.maratondoomsday.ui.hud.HudSquareButton
+import com.cami.maratondoomsday.ui.hud.HudTone
+import com.cami.maratondoomsday.ui.hud.chamfer
 import com.cami.maratondoomsday.ui.theme.Gold
+import com.cami.maratondoomsday.ui.theme.Holo
+import com.cami.maratondoomsday.ui.theme.Orbitron
+import com.cami.maratondoomsday.ui.theme.TextHi
+import com.cami.maratondoomsday.ui.theme.TextLo
+import java.time.LocalDate
 
 @Composable
 fun SettingsScreen(
     ui: MarathonUi,
     author: String?,
+    online: Boolean,
     contentPadding: PaddingValues,
     onAuthor: (String) -> Unit,
-    onCinemaDate: (java.time.LocalDate?) -> Unit,
+    onCinemaDate: (LocalDate?) -> Unit,
     onRules: (List<Int>) -> Unit,
     onShareCode: () -> Unit,
     onLeave: () -> Unit,
@@ -55,22 +66,21 @@ fun SettingsScreen(
             top = contentPadding.calculateTopPadding() + 12.dp,
             bottom = contentPadding.calculateBottomPadding() + 24.dp,
         ),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item { Text("Ajustes", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black) }
+        item { HudHeader(title = "Ajustes", kicker = "Panel de control", online = online) }
 
         // ---- Quién soy ----
         item {
-            SettingsCard("¿Quién usa este celular?") {
+            HudPanel(label = "¿Quién usa este celular?") {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     listOf("Cami", "Papá").forEach { name ->
                         val selected = author == name
-                        BigButton(
+                        HudButton(
                             if (selected) "✓ $name" else name,
                             onClick = { onAuthor(name) },
+                            tone = if (selected) HudTone.Red else HudTone.Ghost,
                             modifier = Modifier.weight(1f),
-                            container = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                            content = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -79,33 +89,31 @@ fun SettingsScreen(
 
         // ---- Fecha del cine ----
         item {
-            SettingsCard("🎟️ Fecha del cine") {
+            HudPanel(label = "Fecha del cine", accent = Gold) {
                 Text(
                     ui.info.cinemaDate?.let { Formats.longDate(it, ui.today).replaceFirstChar { c -> c.uppercase() } }
                         ?: "Por definir",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineSmall,
                     color = Gold,
                 )
-                BigOutlinedButton(
+                HudButton(
                     if (ui.info.cinemaDate == null) "Elegir fecha" else "Cambiar fecha",
                     onClick = { pickingDate = true },
+                    tone = HudTone.Gold,
                 )
                 if (ui.info.cinemaDate != null) {
-                    TextButton(onClick = { onCinemaDate(null) }) {
-                        Text("Quitar fecha (por definir)", style = MaterialTheme.typography.titleMedium)
-                    }
+                    HudButton("Quitar fecha (por definir)", onClick = { onCinemaDate(null) }, tone = HudTone.Ghost, minHeight = 52.dp, textSize = 18.sp)
                 }
             }
         }
 
         // ---- Reglas ----
         item {
-            SettingsCard("📅 ¿Cuántas películas por día?") {
+            HudPanel(label = "Películas por día") {
                 Text(
-                    "Si un día no se ve nada (por ejemplo, el martes de D&D), déjalo en 0.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    "Si un día no se ve nada (como el martes de D&D), déjalo en 0.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextLo,
                 )
                 Formats.DAY_NAMES.forEachIndexed { i, day ->
                     val value = ui.info.rules.getOrElse(i) { 0 }
@@ -113,59 +121,65 @@ fun SettingsScreen(
                         Text(
                             day.replaceFirstChar { it.uppercase() },
                             style = MaterialTheme.typography.titleLarge,
+                            color = if (value == 0) TextLo else TextHi,
                             modifier = Modifier.weight(1f),
                         )
-                        FilledTonalIconButton(
+                        HudSquareButton(
                             onClick = { onRules(ui.info.rules.toMutableList().also { it[i] = (value - 1).coerceAtLeast(0) }) },
                             enabled = value > 0,
-                        ) { Text("−", fontSize = 26.sp, fontWeight = FontWeight.Bold) }
+                        ) { Text("−", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Holo) }
                         Text(
                             "$value",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
+                            fontFamily = Orbitron,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 26.sp,
                             textAlign = TextAlign.Center,
-                            color = if (value == 0) MaterialTheme.colorScheme.onSurfaceVariant else Gold,
-                            modifier = Modifier.width(48.dp),
+                            color = if (value == 0) TextLo else Gold,
+                            modifier = Modifier.width(52.dp),
                         )
-                        FilledTonalIconButton(
+                        HudSquareButton(
                             onClick = { onRules(ui.info.rules.toMutableList().also { it[i] = (value + 1).coerceAtMost(5) }) },
                             enabled = value < 5,
-                        ) { Icon(Icons.Filled.Add, contentDescription = "Más") }
+                        ) { Icon(Icons.Filled.Add, contentDescription = "Más", tint = Holo) }
                     }
                 }
                 if (ui.info.rules != DEFAULT_RULES) {
-                    TextButton(onClick = { onRules(DEFAULT_RULES) }) {
-                        Text("Volver a las reglas originales", style = MaterialTheme.typography.titleMedium)
-                    }
+                    HudButton("Volver a las reglas originales", onClick = { onRules(DEFAULT_RULES) }, tone = HudTone.Ghost, minHeight = 52.dp, textSize = 18.sp)
                 }
             }
         }
 
         // ---- Código ----
         item {
-            SettingsCard("🔑 Código del maratón") {
-                Text(
-                    ui.info.code,
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 6.sp,
-                    color = Gold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+            HudPanel(label = "Código de acceso", accent = Gold) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, Gold.copy(alpha = 0.5f), chamfer(10.dp))
+                        .padding(vertical = 14.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        ui.info.code,
+                        fontFamily = Orbitron,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 38.sp,
+                        letterSpacing = 8.sp,
+                        color = Gold,
+                    )
+                }
                 Text(
                     "En el otro celular, elige “Unirse con código” y escribe este código.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextLo,
                 )
-                BigOutlinedButton("Compartir código", onClick = onShareCode)
+                HudButton("Compartir código", onClick = onShareCode, tone = HudTone.Ghost, icon = Icons.Filled.Share)
             }
         }
 
         item {
-            TextButton(onClick = { leaving = true }) {
-                Text("Salir de este maratón", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
-            }
+            Spacer(Modifier.padding(top = 4.dp))
+            HudButton("Salir de este maratón", onClick = { leaving = true }, tone = HudTone.Red, minHeight = 52.dp, textSize = 18.sp)
         }
     }
 
@@ -180,18 +194,5 @@ fun SettingsScreen(
             onConfirm = onLeave,
             onDismiss = { leaving = false },
         )
-    }
-}
-
-@Composable
-private fun SettingsCard(title: String, content: @Composable () -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SectionTitle(title)
-            content()
-        }
     }
 }
