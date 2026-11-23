@@ -85,7 +85,9 @@ El proyecto ya trae una "receta" (`.github/workflows/compilar-apk.yml`) que GitH
 2. **Name**: `GOOGLE_SERVICES_JSON`
 3. **Secret**: pega **todo** el contenido de `google-services.json`. → **Add secret**.
 4. Ve a la pestaña **Actions** → elige **Compilar APK** → **Run workflow** → **Run workflow**.
-   (Si te pide activar Actions, presiona el botón para activarlas.)
+   (Si te pide activar Actions, presiona el botón para activarlas. Si no aparece el botón
+   **Run workflow**, es porque el proyecto todavía no está en la rama principal `main`:
+   primero hay que unir la rama del proyecto a `main` con un *pull request*; Claude te puede ayudar.)
 5. Espera ~5 minutos a que salga la palomita verde ✅.
 6. El APK queda en la sección **Releases** del repositorio (columna derecha de la página
    principal) con el nombre `maraton-doomsday.apk`. También aparece abajo del resumen de
