@@ -1,0 +1,12 @@
+rules_version = '2';
+
+// Reglas de seguridad para Firestore.
+// Solo la app (con su sesión anónima) puede leer y escribir dentro de "marathons".
+// El código de 6 caracteres funciona como la "contraseña" de cada maratón.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /marathons/{rest=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

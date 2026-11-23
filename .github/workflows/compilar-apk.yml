@@ -1,0 +1,60 @@
+name: Compilar APK
+
+on:
+  workflow_dispatch:   # botón "Run workflow" en la pestaña Actions
+  push:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Poner google-services.json (desde el secreto GOOGLE_SERVICES_JSON)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::warning::Falta el secreto GOOGLE_SERVICES_JSON. El APK se compilará SIN Firebase (ver GUIA.md)."
+            echo "HAS_FIREBASE=false" >> "$GITHUB_ENV"
+          else
+            printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+            echo "HAS_FIREBASE=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Pruebas
+        run: ./gradlew testDebugUnitTest
+
+      - name: Compilar APK
+        run: |
+          ./gradlew assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk maraton-doomsday.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: maraton-doomsday-apk
+          path: maraton-doomsday.apk
+
+      - name: Publicar en "Releases" para descargarlo fácil desde el celular
+        if: env.HAS_FIREBASE == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete apk --yes --cleanup-tag || true
+          gh release create apk maraton-doomsday.apk \
+            --target "${{ github.sha }}" \
+            --title "Maratón Doomsday – APK más reciente" \
+            --notes "Descarga maraton-doomsday.apk desde el celular e instálalo (ver GUIA.md)."
