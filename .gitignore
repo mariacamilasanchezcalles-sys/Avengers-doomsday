@@ -1,0 +1,12 @@
+*.iml
+.gradle/
+/local.properties
+.idea/
+.DS_Store
+build/
+/captures
+.externalNativeBuild
+.cxx
+.kotlin/
+# El archivo de Firebase NO se sube al repositorio (cada quien pone el suyo)
+app/google-services.json
