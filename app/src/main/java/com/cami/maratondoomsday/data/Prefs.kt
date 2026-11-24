@@ -11,6 +11,10 @@ class Prefs(context: Context) {
         set(value) = sp.edit().putString("code", value).apply()
 
     var author: String?
-        get() = sp.getString("author", null)
+        get() = when (val a = sp.getString("author", null)) {
+            "Cami" -> "María"
+            "Papá" -> "Mario"
+            else -> a
+        }
         set(value) = sp.edit().putString("author", value).apply()
 }

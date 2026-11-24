@@ -74,7 +74,14 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 
 /** Color de cada persona en la bitácora. */
-fun authorColor(author: String): Color = if (author == "Papá") Gold else Holo
+/** Nombres antiguos (Cami/Papá) se muestran con los nuevos. */
+fun displayName(author: String): String = when (author) {
+    "Cami" -> "María"
+    "Papá" -> "Mario"
+    else -> author
+}
+
+fun authorColor(author: String): Color = if (displayName(author) == "Mario") Gold else Holo
 
 /** Ventana emergente con marco HUD. */
 @Composable
@@ -293,7 +300,7 @@ private fun LogEntry(number: Int, note: Note, onEdit: () -> Unit, onDelete: () -
         Column(Modifier.weight(1f).padding(start = 12.dp, top = 10.dp, bottom = 6.dp)) {
             val edited = if (note.editedAt != null) " · EDITADA" else ""
             Text(
-                "#%02d  [%s]  %s%s".format(number, note.author.uppercase(), Formats.noteTime(note.createdAt).uppercase(), edited),
+                "#%02d  [%s]  %s%s".format(number, displayName(note.author).uppercase(), Formats.noteTime(note.createdAt).uppercase(), edited),
                 fontFamily = Mono,
                 fontSize = 13.sp,
                 letterSpacing = 1.sp,
