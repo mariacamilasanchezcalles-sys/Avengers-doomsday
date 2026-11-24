@@ -3,6 +3,13 @@
 App de Android para llevar el maratón de películas de Marvel rumbo a *Avengers: Doomsday*,
 sincronizada en tiempo real entre dos celulares (Cami y Papá).
 
+## 🌐 Versión web (sin instalar nada)
+
+**https://mariacamilasanchezcalles-sys.github.io/Avengers-doomsday/**
+
+Se abre en Chrome desde cualquier celular y usa la misma base de datos que la app Android.
+El código de la página está en la carpeta `docs/`.
+
 👉 **Empieza aquí: [GUIA.md](GUIA.md)** — cómo crear Firebase, compilar el APK e instalarlo.
 
 | Inicio | Hoy | Día de descanso | Lista | Detalle | Ajustes |
