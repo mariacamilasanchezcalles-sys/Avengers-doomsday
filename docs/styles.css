@@ -338,3 +338,21 @@ input[type="date"].inp { min-height: 58px; color-scheme: dark; }
 /* 4 pestañas */
 .nav button { font-size: 15px; letter-spacing: 1px; }
 .nav .in { gap: 6px; padding: 9px 8px; }
+
+/* ---------- Pósters ---------- */
+.poster-lg, .poster-sm, .poster-xs { display: block; object-fit: cover; background: var(--panel-hi); flex: none; }
+.poster-lg {
+  width: min(62%, 240px); aspect-ratio: 2 / 3; margin: 4px auto 2px;
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+  filter: drop-shadow(0 0 14px rgba(92, 225, 255, .25));
+  outline: 1px solid rgba(255, 194, 74, .5); outline-offset: -1px;
+}
+.poster-sm { width: 74px; aspect-ratio: 2 / 3; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+.poster-xs { width: 52px; aspect-ratio: 2 / 3; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
+.poster-xs.seen { filter: grayscale(.7) brightness(.7); }
+.grid.posters .ph { aspect-ratio: 2 / 3; position: relative; }
+.grid.posters .cap {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 6px 6px;
+  font: 700 13px/1.15 var(--raj); color: var(--text); text-align: left;
+  background: linear-gradient(180deg, transparent, rgba(3, 7, 12, .92) 45%);
+}

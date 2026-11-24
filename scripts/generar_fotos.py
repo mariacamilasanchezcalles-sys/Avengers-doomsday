@@ -58,11 +58,15 @@ def main():
     archivos.sort(key=lambda p: [orden_natural(x) for x in p.relative_to(RAIZ).parts])
     for p in archivos:
         rel = p.relative_to(RAIZ)
-        seccion = nombre_seccion(rel.parts[0]) if len(rel.parts) > 1 else "General"
+        # Imágenes sueltas en docs/fotos = pósters ("05 - Avengers - Infinity War.jpg").
+        # Imágenes dentro de una carpeta = fotos de esa sección.
+        seccion = nombre_seccion(rel.parts[0]) if len(rel.parts) > 1 else "Pósters"
         entrada = {"archivo": rel.as_posix(), "seccion": seccion}
         txt = p.with_suffix(".txt")
         if txt.exists():
             entrada["texto"] = txt.read_text(encoding="utf-8").strip()
+        elif len(rel.parts) == 1:
+            entrada["texto"] = nombre_seccion(p.stem)
         mini_rel = Path("_mini") / rel.with_suffix(".jpg")
         if miniatura(p, RAIZ / mini_rel):
             entrada["mini"] = mini_rel.as_posix()

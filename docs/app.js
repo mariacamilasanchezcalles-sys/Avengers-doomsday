@@ -401,11 +401,41 @@ const A = {
 let gallery = null; // null = cargando, [] = sin fotos
 fetch("fotos/fotos.json", { cache: "no-cache" })
   .then((r) => (r.ok ? r.json() : { fotos: [] }))
-  .then((j) => { gallery = Array.isArray(j?.fotos) ? j.fotos.filter((f) => f && typeof f.archivo === "string") : []; render(); })
+  .then((j) => {
+    gallery = Array.isArray(j?.fotos) ? j.fotos.filter((f) => f && typeof f.archivo === "string") : [];
+    for (const f of gallery) {
+      const parts = f.archivo.split("/");
+      // "05 - Avengers - Infinity War.jpg" -> "Avengers - Infinity War"
+      f.titulo = parts[parts.length - 1].replace(/\.[^.]+$/, "").replace(/^\d+[\s._-]*/, "").trim();
+      f.poster = parts.length === 1; // las imágenes sueltas en docs/fotos son los pósters de las películas
+      if (f.poster) { f.seccion = "Pósters"; f.texto = f.texto || f.titulo; }
+    }
+    render();
+  })
   .catch(() => { gallery = []; render(); });
 
 const photoSrc = (f) => `fotos/${f.archivo.split("/").map(encodeURIComponent).join("/")}`;
 const photoThumb = (f) => (f.mini ? `fotos/${f.mini.split("/").map(encodeURIComponent).join("/")}` : photoSrc(f));
+
+/** "Avengers: Infinity War" y "05 - Avengers - Infinity War" -> "avengersinfinitywar" */
+const normTitle = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+/** "lokit1episodios46" -> "lokit1": así las partes de una misma temporada comparten póster. */
+const seriesKey = (n) => n.replace(/episodios?\d.*$/, "");
+function posterFor(movie) {
+  if (!gallery) return null;
+  const t = normTitle(movie.title);
+  const posters = gallery.filter((f) => f.poster);
+  const exact = posters.find((f) => normTitle(f.titulo) === t);
+  if (exact) return exact;
+  const k = seriesKey(t);
+  if (k === t || k.length < 3) return null;
+  return posters.find((f) => seriesKey(normTitle(f.titulo)) === k) || null;
+}
+/** Miniatura del póster de una película (o nada si no hay). */
+function posterImg(movie, cls) {
+  const f = posterFor(movie);
+  return f ? `<img class="${cls}" src="${esc(photoThumb(f))}" alt="Póster de ${esc(movie.title)}" loading="lazy" decoding="async">` : "";
+}
 
 // ======================================================================
 // Enlace para unirse: …/#unirse=CODIGO
@@ -586,9 +616,9 @@ function screenToday(ui) {
   const focus = ui.todayPending[0] || ui.todayWatched[ui.todayWatched.length - 1] || null;
   let main = "";
   const next = ui.nextPending && ui.nextPending.date
-    ? `<div style="margin-top:6px"><p class="lbl holo">La siguiente</p>
+    ? `<div class="row" style="margin-top:6px;align-items:flex-start">${posterImg(ui.nextPending.movie, "poster-sm")}<div class="grow"><p class="lbl holo">La siguiente</p>
         <p class="t-head gold" style="font-size:26px">${esc(ui.nextPending.movie.title)}</p>
-        <p class="t-title hi" style="font-size:21px">${esc(cap1(whenPhrase(ui.nextPending.date, ui.today)))}</p></div>` : "";
+        <p class="t-title hi" style="font-size:21px">${esc(cap1(whenPhrase(ui.nextPending.date, ui.today)))}</p></div></div>` : "";
   const status = (label, accent, title, body) => panel({ label, accent }, `
       <p class="t-big hi tc">${esc(title)}</p>${body ? `<p class="muted tc">${esc(body)}</p>` : ""}${next}`);
 
@@ -596,6 +626,7 @@ function screenToday(ui) {
   else if (ui.todayPending.length) {
     const n = ui.todayPending.length;
     main = ui.todayPending.map((it, i) => panel({ label: n > 1 ? `Hoy toca · ${i + 1} de ${n}` : "Hoy toca", accent: "red", blink: true, scan: true, cls: "target" }, `
+      ${posterImg(it.movie, "poster-lg")}
       <p class="t-big hi tc" style="font-size:38px;padding:6px 0">${esc(it.movie.title)}</p>
       <div class="stats">${stat("Año", it.movie.year ?? "—")}${stat("Duración", duration(it.movie.durationMin, it.movie.approxDuration) ?? "—")}</div>
       ${stat("Dónde verla", it.movie.where || "—", true)}
@@ -659,7 +690,7 @@ function screenList(ui) {
     return `<div class="tli ${i === 0 ? "first" : ""} ${i === ui.items.length - 1 ? "last" : ""}">
       <div class="rail">${diamond(i + 1, m.watched, accent)}</div>
       <div class="card">${panel({ accent, cls: `sm ${isToday ? "fill-red" : ""}`, act: S.reorder ? "" : "open", data: `data-id="${esc(m.id)}"` }, `
-        <div class="row"><div class="grow">
+        <div class="row">${posterImg(m, `poster-xs${m.watched ? " seen" : ""}`)}<div class="grow">
           <p class="lbl" style="color:var(--a);font-size:15px">${esc(dateText)}</p>
           <p class="t-title" style="color:${m.watched ? "var(--muted)" : "var(--text)"}">${esc(m.title)}</p>
           <p class="mono">${esc(movieInfo(m))}</p></div>${arrows}</div>`)}</div></div>`;
@@ -719,7 +750,7 @@ function screenDetail(ui, it) {
   return `<div class="page nonav">
     <div class="topbar"><button class="sqbtn" data-act="back" aria-label="Regresar">${ICON.back}</button>
       <div><p class="lbl holo">Expediente</p><p class="lbl gold" style="font-size:16px">Película #${pad(number)} de ${ui.total}</p></div></div>
-    ${panel({ accent }, `<h1 class="t-big hi">${esc(m.title)}</h1>
+    ${panel({ accent }, `${posterImg(m, "poster-lg")}<h1 class="t-big hi">${esc(m.title)}</h1>
       <div class="stats">${stat("Año", m.year ?? "—")}${stat("Duración", duration(m.durationMin, m.approxDuration) ?? "—")}</div>
       ${stat("Dónde verla", m.where || "—", true)}
       <div style="margin-top:4px"><p class="lbl" style="color:var(--a)">${esc(label)}</p><p class="t-title hi">${esc(cap1(text))}</p></div>`)}
@@ -747,11 +778,11 @@ function screenPhotos() {
   else if (!gallery.length) body = panel({ label: "Sin fotos todavía", accent: "gold" }, `
     <p class="t-title hi">Aquí van a salir las fotos del maratón.</p>
     <p class="muted t-small">Se agregan subiéndolas a la carpeta docs/fotos del repositorio en GitHub.</p>`);
-  else body = gallerySections().map((g) => panel({ label: `${g.name} · ${g.items.length}` }, `
-    <div class="grid">${g.items.map(({ f, i }) => `<button class="ph" data-act="photo-open" data-i="${i}" aria-label="${esc(f.texto || "Abrir foto")}">
-      <img src="${esc(photoThumb(f))}" alt="${esc(f.texto || "")}" loading="lazy" decoding="async"></button>`).join("")}</div>`)).join("");
+  else body = gallerySections().sort((a, b) => (b.name === "Pósters") - (a.name === "Pósters")).map((g) => panel({ label: `${g.name} · ${g.items.length}`, accent: g.name === "Pósters" ? "gold" : "holo" }, `
+    <div class="grid ${g.name === "Pósters" ? "posters" : ""}">${g.items.map(({ f, i }) => `<button class="ph" data-act="photo-open" data-i="${i}" aria-label="${esc(f.texto || "Abrir foto")}">
+      <img src="${esc(photoThumb(f))}" alt="${esc(f.texto || "")}" loading="lazy" decoding="async">${f.poster ? `<span class="cap">${esc(f.titulo)}</span>` : ""}</button>`).join("")}</div>`)).join("");
   const n = gallery ? gallery.length : 0;
-  return `<div class="page">${header("Fotos", gallery ? `${n} ${plural(n, "foto", "fotos")} del maratón` : "Galería")}${body}</div>`;
+  return `<div class="page">${header("Fotos", gallery ? `${n} ${plural(n, "imagen", "imágenes")} del maratón` : "Galería")}${body}</div>`;
 }
 
 function viewerHtml(i) {
