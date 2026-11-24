@@ -536,7 +536,7 @@ function screenSetup() {
   const saved = recent.length && !S.joining ? panel({ label: "Guardados en este celular", accent: "gold" },
     recent.map((c) => btn(`Entrar al maratón ${c}`, "rejoin", { tone: "ghost", size: "md", disabled: S.busy, data: `data-v="${c}"` })).join("")) : "";
   return `<div class="page center nonav">
-    <div style="display:flex;justify-content:center">${gauge(12, 12, { size: 170, lit: "#5CE1FF", center: '<span class="num" style="font-size:26px">MD</span>' })}</div>
+    <div style="display:flex;justify-content:center">${gauge(12, 12, { size: 170, lit: "#5CE1FF", center: '<span class="num" style="font-size:26px">m3</span>' })}</div>
     <div><p class="lbl holo">Sistema de maratón · v1.0</p><h1 class="title-xl">PROTOCOLO<br>DOOMSDAY</h1></div>
     <p class="muted">Maratón rumbo al cine. Un celular crea el maratón y el otro se une con el código.</p>
     ${saved}${body}${status}</div>`;

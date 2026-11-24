@@ -105,7 +105,7 @@ fun SetupScreen(
     var code by rememberSaveable { mutableStateOf("") }
 
     CenteredPage {
-        BootEmblem("MD")
+        BootEmblem("m3")
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             HudLabel("Sistema de maratón · v1.0", color = Holo, size = 13.sp)
             Text(
