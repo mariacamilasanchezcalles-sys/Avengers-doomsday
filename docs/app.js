@@ -173,7 +173,7 @@ const store = {
 
 const S = {
   code: store.get("maraton.code"),
-  author: store.get("maraton.author"),
+  author: displayName(store.get("maraton.author")),
   user: null,
   authError: null,
   busy: false,
@@ -394,7 +394,7 @@ const A = {
 };
 
 // ======================================================================
-// Fotos: las sube Cami al repositorio en docs/fotos/. Una automatización de
+// Fotos: las sube María al repositorio en docs/fotos/. Una automatización de
 // GitHub genera docs/fotos/fotos.json (lista + miniaturas) en cada subida.
 // ======================================================================
 
@@ -545,7 +545,9 @@ function gauge(done, total, { size = 150, lit = "#FFC24A", center = "" } = {}) {
 }
 
 const plural = (n, one, many) => (n === 1 ? one : many);
-const authorColor = (a) => (a === "Papá" ? "var(--gold)" : "var(--holo)");
+/** Nombres antiguos (Cami/Papá) se muestran con los nuevos. */
+function displayName(a) { return a === "Cami" ? "María" : a === "Papá" ? "Mario" : a; }
+const authorColor = (a) => (displayName(a) === "Mario" ? "var(--gold)" : "var(--holo)");
 
 // ======================================================================
 // Pantallas
@@ -577,8 +579,8 @@ function screenAuthor() {
     <p class="lbl holo">Identificación</p>
     <h1 class="t-big">¿Quién usa este celular?</h1>
     <p class="muted">Así sabremos quién escribió cada nota. Se puede cambiar después en Ajustes.</p>
-    ${btn("Soy Cami", "author", { tone: "red", size: "lg", data: 'data-v="Cami"' })}
-    ${btn("Soy Papá", "author", { tone: "gold", size: "lg", data: 'data-v="Papá"' })}</div>`;
+    ${btn("Soy María", "author", { tone: "red", size: "lg", data: 'data-v="María"' })}
+    ${btn("Soy Mario", "author", { tone: "gold", size: "lg", data: 'data-v="Mario"' })}</div>`;
 }
 
 function screenLoading() {
@@ -600,7 +602,7 @@ function notesSection(movieId, notes) {
   const list = notes.length
     ? notes.map((n, i) => `<div class="log" style="--lc:${authorColor(n.author)}">
         <div class="bar"></div>
-        <div class="body"><div class="meta">#${pad(i + 1)}  [${esc(n.author.toUpperCase())}]  ${esc(noteTime(n.createdAt).toUpperCase())}${n.editedAt ? " · EDITADA" : ""}</div>
+        <div class="body"><div class="meta">#${pad(i + 1)}  [${esc(displayName(n.author).toUpperCase())}]  ${esc(noteTime(n.createdAt).toUpperCase())}${n.editedAt ? " · EDITADA" : ""}</div>
         <div class="txt">${esc(n.text)}</div></div>
         <div class="acts">
           <button class="sqbtn s" data-act="note-edit" data-id="${esc(n.id)}" aria-label="Editar nota">${ICON.edit}</button>
@@ -702,7 +704,7 @@ function screenList(ui) {
 }
 
 function screenSettings(ui) {
-  const who = ["Cami", "Papá"].map((n) => btn(S.author === n ? `✓ ${n}` : n, "author", { tone: S.author === n ? "red" : "ghost", data: `data-v="${n}"` })).join("");
+  const who = ["María", "Mario"].map((n) => btn(S.author === n ? `✓ ${n}` : n, "author", { tone: S.author === n ? "red" : "ghost", data: `data-v="${n}"` })).join("");
   const rules = DAY_NAMES.map((d, i) => {
     const v = ui.info.rules[i] ?? 0;
     return `<div class="rule ${v === 0 ? "zero" : ""}"><span class="d">${cap1(d)}</span>
@@ -722,7 +724,7 @@ function screenSettings(ui) {
       ${isDefault ? "" : btn("Volver a las reglas originales", "rules-reset", { tone: "ghost", size: "md" })}`)}
     ${panel({ label: "Código de acceso", accent: "gold" }, `
       <div class="codebox">${esc(ui.info.code)}</div>
-      <p class="muted t-small">Este celular ya guardó el código: no hay que volver a escribirlo. El enlace para compartir lleva el código, así que tu papá solo lo toca y entra directo.</p>
+      <p class="muted t-small">Este celular ya guardó el código: no hay que volver a escribirlo. El enlace para compartir lleva el código, así que en el otro celular solo lo tocan y entran directo.</p>
       <div class="two">${btn("Copiar código", "copy-code", { tone: "ghost", icon: "copy", size: "md" })}${btn("Copiar enlace", "copy-link", { tone: "ghost", icon: "copy", size: "md" })}</div>
       ${btn("Compartir por WhatsApp…", "share", { tone: "gold", icon: "share" })}`)}
     ${btn("Salir de este maratón", "leave", { tone: "red", size: "md" })}</div>`;
@@ -833,7 +835,7 @@ function dialogHtml() {
   } else if (d.type === "code") {
     inner = panel({ label: "Maratón creado", accent: "gold", cls: "fill-hi" }, `
       <p class="muted">Este es su código de acceso:</p><div class="codebox">${esc(d.code)}</div>
-      <p class="hi">Mándale a tu papá el enlace de esta página junto con el código. Ahí elige “Unirse con código” y lo escribe. También lo ves en Ajustes.</p>
+      <p class="hi">Manda al otro celular el enlace de esta página junto con el código. Ahí elige “Unirse con código” y lo escribe. También lo ves en Ajustes.</p>
       ${btn("Compartir enlace y código", "share", { tone: "gold", icon: "share", size: "md" })}${btn("Entendido", "dlg-cancel", { tone: "ghost", size: "md" })}`);
   }
   return `<div class="overlay" data-act="dlg-backdrop" role="dialog" aria-modal="true">${inner}</div>`;

@@ -74,7 +74,7 @@ fun SettingsScreen(
         item {
             HudPanel(label = "¿Quién usa este celular?") {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    listOf("Cami", "Papá").forEach { name ->
+                    listOf("María", "Mario").forEach { name ->
                         val selected = author == name
                         HudButton(
                             if (selected) "✓ $name" else name,

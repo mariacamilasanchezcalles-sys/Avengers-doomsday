@@ -177,8 +177,8 @@ fun ChooseAuthorScreen(onChoose: (String) -> Unit) {
             textAlign = TextAlign.Center,
             color = TextLo,
         )
-        HudButton("Soy Cami", onClick = { onChoose("Cami") }, tone = HudTone.Red, minHeight = 76.dp, textSize = 26.sp)
-        HudButton("Soy Papá", onClick = { onChoose("Papá") }, tone = HudTone.Gold, minHeight = 76.dp, textSize = 26.sp)
+        HudButton("Soy María", onClick = { onChoose("María") }, tone = HudTone.Red, minHeight = 76.dp, textSize = 26.sp)
+        HudButton("Soy Mario", onClick = { onChoose("Mario") }, tone = HudTone.Gold, minHeight = 76.dp, textSize = 26.sp)
     }
 }
 
