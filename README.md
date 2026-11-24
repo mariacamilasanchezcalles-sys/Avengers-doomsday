@@ -10,6 +10,9 @@ sincronizada en tiempo real entre dos celulares (Cami y Papá).
 Se abre en Chrome desde cualquier celular y usa la misma base de datos que la app Android.
 El código de la página está en la carpeta `docs/`.
 
+**Fotos:** súbelas a `docs/fotos/` (una carpeta por película si quieres agruparlas, p. ej. `01 X-Men/`).
+GitHub genera solo la lista y las miniaturas (workflow *Fotos*). Ver `docs/fotos/LEEME.md`.
+
 👉 **Empieza aquí: [GUIA.md](GUIA.md)** — cómo crear Firebase, compilar el APK e instalarlo.
 
 | Inicio | Hoy | Día de descanso | Lista | Detalle | Ajustes |

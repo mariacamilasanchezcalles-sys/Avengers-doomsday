@@ -1,0 +1,45 @@
+name: Fotos
+
+# Cada vez que se suben o borran fotos en docs/fotos/, regenera la lista
+# (docs/fotos/fotos.json) y las miniaturas, y las guarda en la misma rama.
+on:
+  push:
+    paths:
+      - "docs/fotos/**"
+      - "!docs/fotos/fotos.json"
+      - "!docs/fotos/_mini/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fotos-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  lista:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generar lista y miniaturas
+        run: |
+          pip install --quiet pillow
+          python3 scripts/generar_fotos.py
+
+      - name: Guardar cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/fotos/fotos.json docs/fotos/_mini
+          if git diff --cached --quiet; then
+            echo "Sin cambios"
+          else
+            git commit -m "Actualizar lista de fotos"
+            git push
+          fi

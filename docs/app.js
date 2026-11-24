@@ -82,6 +82,11 @@ function duration(min, approx) {
   const t = h === 0 ? `${m} min` : m === 0 ? `${h} h` : `${h} h ${m} min`;
   return approx ? `~${t}` : t;
 }
+/** "38 h 12 min" */
+function hoursText(min) {
+  const h = Math.floor(min / 60), m = min % 60;
+  return h === 0 ? `${m} min` : m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
 const movieInfo = (m) => [m.year, duration(m.durationMin, m.approxDuration), m.where || null].filter(Boolean).join("  ·  ");
 
 // ======================================================================
@@ -140,8 +145,12 @@ function buildUi() {
     daysToCinema: info.cinemaDate ? diffDays(today, info.cinemaDate) : null,
     behind: null,
   };
+  const pendingItems = items.filter((i) => !i.movie.watched);
+  ui.pendingMin = pendingItems.reduce((t, i) => t + (i.movie.durationMin || 0), 0);
+  ui.pendingApprox = pendingItems.some((i) => i.movie.approxDuration || !i.movie.durationMin);
+  ui.watchedMin = items.filter((i) => i.movie.watched).reduce((t, i) => t + (i.movie.durationMin || 0), 0);
   if (info.cinemaDate) {
-    const pend = items.filter((i) => !i.movie.watched);
+    const pend = pendingItems;
     const last = pend.map((i) => i.date).filter(Boolean).sort().pop();
     if (pend.length && (!last || last > info.cinemaDate)) {
       ui.behind = {
@@ -200,6 +209,7 @@ try {
 const marathonRef = (c) => doc(db, "marathons", c);
 const moviesCol = (c) => collection(db, "marathons", c, "movies");
 const notesCol = (c) => collection(db, "marathons", c, "notes");
+
 const logErr = (e) => console.warn("No se pudo guardar", e);
 
 let unsubs = [];
@@ -278,9 +288,19 @@ function randomCode() {
 }
 const normalizeCode = (s) => s.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
 
+/** Códigos de maratón que este celular ya usó, para entrar con un toque. */
+function recentCodes() {
+  try { const r = JSON.parse(store.get("maraton.recent") || "[]"); return Array.isArray(r) ? r.filter((x) => /^[A-Z0-9]{6}$/.test(x)) : []; }
+  catch { return []; }
+}
+function rememberCode(c) {
+  store.set("maraton.recent", JSON.stringify([c, ...recentCodes().filter((x) => x !== c)].slice(0, 5)));
+}
+
 function setCode(c) {
   S.code = c;
   store.set("maraton.code", c);
+  if (c) rememberCode(c);
   if (c) startListening(); else { stopListening(); S.info = null; S.mstate = "loading"; }
 }
 
@@ -374,13 +394,47 @@ const A = {
 };
 
 // ======================================================================
-// Rutas: #hoy, #lista, #ajustes, #peli/ID
+// Fotos: las sube Cami al repositorio en docs/fotos/. Una automatización de
+// GitHub genera docs/fotos/fotos.json (lista + miniaturas) en cada subida.
+// ======================================================================
+
+let gallery = null; // null = cargando, [] = sin fotos
+fetch("fotos/fotos.json", { cache: "no-cache" })
+  .then((r) => (r.ok ? r.json() : { fotos: [] }))
+  .then((j) => { gallery = Array.isArray(j?.fotos) ? j.fotos.filter((f) => f && typeof f.archivo === "string") : []; render(); })
+  .catch(() => { gallery = []; render(); });
+
+const photoSrc = (f) => `fotos/${f.archivo.split("/").map(encodeURIComponent).join("/")}`;
+const photoThumb = (f) => (f.mini ? `fotos/${f.mini.split("/").map(encodeURIComponent).join("/")}` : photoSrc(f));
+
+// ======================================================================
+// Enlace para unirse: …/#unirse=CODIGO
+// ======================================================================
+
+const baseUrl = () => location.href.split("#")[0];
+const joinLink = (c) => `${baseUrl()}#unirse=${c}`;
+
+function checkJoinLink() {
+  const m = location.hash.match(/^#\/?unirse=([A-Za-z0-9]{6})/);
+  if (!m) return false;
+  const c = normalizeCode(m[1]);
+  history.replaceState(null, "", `${location.pathname}${location.search}#hoy`);
+  if (S.code === c) { render(); return true; }
+  const join = () => { if (S.code) setCode(null); S.joining = true; S.joinCode = c; render(); joinMarathon(); };
+  if (!S.code) join();
+  else confirm("¿Cambiar de maratón?", `Este enlace es del maratón ${c}. En este celular están en el ${S.code}.`, "Cambiar", join);
+  return true;
+}
+
+// ======================================================================
+// Rutas: #hoy, #lista, #fotos, #ajustes, #peli/ID, #foto/ID
 // ======================================================================
 
 function route() {
   const h = location.hash.replace(/^#\/?/, "");
-  if (h.startsWith("peli/")) return { tab: null, movieId: decodeURIComponent(h.slice(5)) };
-  return { tab: ["lista", "ajustes"].includes(h) ? h : "hoy", movieId: null };
+  if (h.startsWith("peli/")) return { tab: null, movieId: decodeURIComponent(h.slice(5)), photoId: null };
+  if (h.startsWith("foto/")) return { tab: "fotos", movieId: null, photoId: decodeURIComponent(h.slice(5)) };
+  return { tab: ["lista", "fotos", "ajustes"].includes(h) ? h : "hoy", movieId: null, photoId: null };
 }
 const go = (h) => { location.hash = h; };
 function goBack() {
@@ -404,6 +458,9 @@ const ICON = {
   edit: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.3V21h3.7L17.8 9.9l-3.7-3.7zM20.7 7a1 1 0 000-1.4l-2.3-2.3a1 1 0 00-1.4 0l-1.8 1.8 3.7 3.7z"/></svg>',
   trash: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 7h12l-1 14H7zM9 3h6l1 2h4v2H4V5h4z"/></svg>',
   share: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 16a3 3 0 00-2.1.9L8.9 13a3 3 0 000-2l7-3.9A3 3 0 1015 5a3 3 0 00.1.7l-7 3.9a3 3 0 100 4.8l7 4A3 3 0 1018 16z"/></svg>',
+  camera: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3h6l1.5 2H21v15H3V5h4.5zM12 8a5 5 0 100 10 5 5 0 000-10zm0 2.2a2.8 2.8 0 110 5.6 2.8 2.8 0 010-5.6z"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 3h11v13h-2V5H8zM4 7h11v14H4z"/></svg>',
+  close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><path d="M5 5l14 14M19 5L5 19"/></svg>',
   up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><path d="M5 15l7-7 7 7"/></svg>',
   down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="square"><path d="M5 9l7 7 7-7"/></svg>',
 };
@@ -475,11 +532,14 @@ function screenSetup() {
   const status = S.busy ? `<p class="console">Conectando con la base de datos</p>`
     : S.error ? panel({ label: "Error", accent: "red", blink: true }, `<p class="t-body hi" style="text-align:left">${esc(S.error)}</p>`)
     : `<p class="console">Esperando instrucciones</p>`;
+  const recent = recentCodes();
+  const saved = recent.length && !S.joining ? panel({ label: "Guardados en este celular", accent: "gold" },
+    recent.map((c) => btn(`Entrar al maratón ${c}`, "rejoin", { tone: "ghost", size: "md", disabled: S.busy, data: `data-v="${c}"` })).join("")) : "";
   return `<div class="page center nonav">
-    <div style="display:flex;justify-content:center">${gauge(12, 12, { size: 170, lit: "#5CE1FF", center: '<span class="num" style="font-size:26px">MD</span>' })}</div>
+    <div style="display:flex;justify-content:center">${gauge(12, 12, { size: 170, lit: "#5CE1FF", center: '<span class="num" style="font-size:26px">m3</span>' })}</div>
     <div><p class="lbl holo">Sistema de maratón · v1.0</p><h1 class="title-xl">PROTOCOLO<br>DOOMSDAY</h1></div>
     <p class="muted">Maratón rumbo al cine. Un celular crea el maratón y el otro se une con el código.</p>
-    ${body}${status}</div>`;
+    ${saved}${body}${status}</div>`;
 }
 
 function screenAuthor() {
@@ -555,6 +615,14 @@ function screenToday(ui) {
       <div class="col grow"><p class="t-title hi">${ui.watchedCount} de ${ui.total} vistas</p>
         ${stat("Pendientes", String(ui.total - ui.watchedCount))}${stat("Completado", `${pct} %`, true)}</div></div>`);
 
+  const ph = Math.floor(ui.pendingMin / 60), pm = ui.pendingMin % 60;
+  const pendN = ui.total - ui.watchedCount;
+  const hoursPanel = panel({ label: "Horas por ver", accent: "holo" }, `
+    <div class="count holo-count"><b>${ui.pendingApprox && ui.pendingMin ? "~" : ""}${pad(ph)}</b><span class="lbl">${ph === 1 ? "hora" : "horas"}</span>
+      ${pm ? `<b class="sub">${pad(pm)}</b><span class="lbl">min</span>` : ""}</div>
+    <p class="t-title hi">${pendN === 0 ? "¡Ya no nos queda nada por ver!" : `Nos quedan ${ui.pendingApprox ? "aprox. " : ""}${hoursText(ui.pendingMin)} de películas por ver.`}</p>
+    <p class="muted t-small">${pendN} ${plural(pendN, "película pendiente", "películas pendientes")} · ya vimos ${hoursText(ui.watchedMin)}.</p>`);
+
   const d = ui.daysToCinema;
   const countText = d == null ? "Fecha del cine: por definir"
     : d > 1 ? `Faltan ${d} días para ver Doomsday en el cine`
@@ -568,7 +636,9 @@ function screenToday(ui) {
   const notes = focus ? panel({ label: "Bitácora · notas" }, `
     <p class="t-title gold">${esc(focus.movie.title)}</p>${notesSection(focus.movie.id, ui.notesBy[focus.movie.id] || [])}`) : "";
 
-  return `<div class="page">${header("Hoy", longDate(ui.today, ui.today))}${main}${behind}${progress}${countdown}${notes}</div>`;
+  return `<div class="page">${header("Hoy", longDate(ui.today, ui.today))}${main}${behind}${progress}${hoursPanel}${countdown}${notes}
+    <div class="codeline"><span class="lbl muted">Código del maratón</span><b>${esc(S.code)}</b>
+      <button class="sqbtn s" data-act="copy-code" aria-label="Copiar código">${ICON.copy}</button></div></div>`;
 }
 
 function diamond(num, watched, accent) {
@@ -594,7 +664,7 @@ function screenList(ui) {
           <p class="t-title" style="color:${m.watched ? "var(--muted)" : "var(--text)"}">${esc(m.title)}</p>
           <p class="mono">${esc(movieInfo(m))}</p></div>${arrows}</div>`)}</div></div>`;
   }).join("");
-  return `<div class="page">${header("Lista", `${ui.watchedCount} de ${ui.total} vistas`)}
+  return `<div class="page">${header("Lista", `${ui.watchedCount} de ${ui.total} vistas · faltan ${hoursText(ui.pendingMin)}`)}
     ${btn(S.reorder ? "Listo, guardar orden" : "Reordenar", "reorder", { tone: S.reorder ? "gold" : "ghost", size: "md" })}
     <div class="tl">${rows}</div>
     ${btn("Agregar película", "movie-add", { tone: "ghost", icon: "plus" })}</div>`;
@@ -621,8 +691,9 @@ function screenSettings(ui) {
       ${isDefault ? "" : btn("Volver a las reglas originales", "rules-reset", { tone: "ghost", size: "md" })}`)}
     ${panel({ label: "Código de acceso", accent: "gold" }, `
       <div class="codebox">${esc(ui.info.code)}</div>
-      <p class="muted t-small">En el otro celular, abre esta misma página, elige “Unirse con código” y escribe este código.</p>
-      ${btn("Compartir enlace y código", "share", { tone: "ghost", icon: "share" })}`)}
+      <p class="muted t-small">Este celular ya guardó el código: no hay que volver a escribirlo. El enlace para compartir lleva el código, así que tu papá solo lo toca y entra directo.</p>
+      <div class="two">${btn("Copiar código", "copy-code", { tone: "ghost", icon: "copy", size: "md" })}${btn("Copiar enlace", "copy-link", { tone: "ghost", icon: "copy", size: "md" })}</div>
+      ${btn("Compartir por WhatsApp…", "share", { tone: "gold", icon: "share" })}`)}
     ${btn("Salir de este maratón", "leave", { tone: "red", size: "md" })}</div>`;
 }
 
@@ -659,8 +730,45 @@ function screenDetail(ui, it) {
     <p class="muted t-small">Quitarla también borra sus notas en los dos celulares.</p></div>`;
 }
 
+function gallerySections() {
+  const groups = [];
+  for (const [i, f] of (gallery || []).entries()) {
+    const sec = f.seccion || "General";
+    let g = groups.find((x) => x.name === sec);
+    if (!g) groups.push((g = { name: sec, items: [] }));
+    g.items.push({ f, i });
+  }
+  return groups;
+}
+
+function screenPhotos() {
+  let body;
+  if (gallery === null) body = `<p class="console">Cargando fotos</p>`;
+  else if (!gallery.length) body = panel({ label: "Sin fotos todavía", accent: "gold" }, `
+    <p class="t-title hi">Aquí van a salir las fotos del maratón.</p>
+    <p class="muted t-small">Se agregan subiéndolas a la carpeta docs/fotos del repositorio en GitHub.</p>`);
+  else body = gallerySections().map((g) => panel({ label: `${g.name} · ${g.items.length}` }, `
+    <div class="grid">${g.items.map(({ f, i }) => `<button class="ph" data-act="photo-open" data-i="${i}" aria-label="${esc(f.texto || "Abrir foto")}">
+      <img src="${esc(photoThumb(f))}" alt="${esc(f.texto || "")}" loading="lazy" decoding="async"></button>`).join("")}</div>`)).join("");
+  const n = gallery ? gallery.length : 0;
+  return `<div class="page">${header("Fotos", gallery ? `${n} ${plural(n, "foto", "fotos")} del maratón` : "Galería")}${body}</div>`;
+}
+
+function viewerHtml(i) {
+  const f = gallery?.[i];
+  if (!f) return "";
+  const prev = i > 0 ? `<button class="sqbtn" data-act="photo-go" data-i="${i - 1}" aria-label="Anterior">${ICON.back}</button>` : `<span style="width:52px"></span>`;
+  const next = i < gallery.length - 1 ? `<button class="sqbtn" data-act="photo-go" data-i="${i + 1}" aria-label="Siguiente" style="transform:scaleX(-1)">${ICON.back}</button>` : `<span style="width:52px"></span>`;
+  return `<div class="viewer" role="dialog" aria-modal="true">
+    <div class="vtop"><span class="lbl holo">${esc(f.seccion || "General")} · ${i + 1} de ${gallery.length}</span>
+      <button class="sqbtn" data-act="photo-close" aria-label="Cerrar">${ICON.close}</button></div>
+    <div class="vimg"><img src="${esc(photoSrc(f))}" alt="${esc(f.texto || "")}"></div>
+    ${f.texto ? `<p class="t-title hi tc">${esc(f.texto)}</p>` : ""}
+    <div class="vnav">${prev}<a class="lbl gold" href="${esc(photoSrc(f))}" download>Descargar</a>${next}</div></div>`;
+}
+
 function nav(tab) {
-  const t = [["hoy", "Hoy", "home"], ["lista", "Lista", "list"], ["ajustes", "Ajustes", "gear"]];
+  const t = [["hoy", "Hoy", "home"], ["lista", "Lista", "list"], ["fotos", "Fotos", "camera"], ["ajustes", "Ajustes", "gear"]];
   return `<nav class="nav"><div class="in">${t.map(([k, l, i]) =>
     `<button class="${tab === k ? "sel" : ""}" data-act="tab" data-v="${k}" ${tab === k ? 'aria-current="page"' : ""}>${ICON[i]}<span>${l}</span></button>`).join("")}</div></nav>`;
 }
@@ -735,7 +843,8 @@ function render() {
     else {
       if (r.movieId && !it && ui.items.length) { go("lista"); return; }
       const tab = r.tab || "lista";
-      html = (tab === "hoy" ? screenToday(ui) : tab === "lista" ? screenList(ui) : screenSettings(ui)) + nav(tab);
+      html = (tab === "hoy" ? screenToday(ui) : tab === "lista" ? screenList(ui) : tab === "fotos" ? screenPhotos() : screenSettings(ui)) + nav(tab);
+      if (r.photoId != null) html += viewerHtml(Number(r.photoId));
       hasNav = true;
     }
   }
@@ -774,13 +883,18 @@ function confirm(title, text, confirmText, onOk) {
 }
 
 async function share() {
-  const url = location.href.split("#")[0];
-  const text = `¡Únete a nuestro maratón rumbo a Doomsday! 🍿\nAbre ${url} , elige “Unirse con código” y escribe: ${S.code}`;
+  const url = joinLink(S.code);
+  const text = `¡Únete a nuestro maratón rumbo a Doomsday! 🍿\nToca este enlace y entras directo (código ${S.code}):\n${url}`;
   try {
     if (navigator.share) { await navigator.share({ title: "Maratón Doomsday", text }); return; }
   } catch (e) { if (e && e.name === "AbortError") return; }
   try { await navigator.clipboard.writeText(text); showToast("Copiado. Pégalo en WhatsApp para mandarlo."); }
   catch { showToast(`Código: ${S.code} · Página: ${url}`); }
+}
+
+async function copyText(text, okMsg) {
+  try { await navigator.clipboard.writeText(text); showToast(okMsg); }
+  catch { showToast(text); }
 }
 
 root.addEventListener("click", (ev) => {
@@ -817,6 +931,12 @@ root.addEventListener("click", (ev) => {
     case "rule": { const r = [...lastUi.info.rules]; const i = Number(el.dataset.i); r[i] = Math.min(5, Math.max(0, (r[i] || 0) + Number(el.dataset.d))); A.setRules(r); break; }
     case "rules-reset": A.setRules(DEFAULT_RULES); break;
     case "share": share(); break;
+    case "copy-code": copyText(S.code, `Código ${S.code} copiado`); break;
+    case "copy-link": copyText(joinLink(S.code), "Enlace copiado. Pégalo en WhatsApp."); break;
+    case "rejoin": S.joinCode = el.dataset.v; S.joining = false; joinMarathon(); break;
+    case "photo-open": go(`foto/${el.dataset.i}`); break;
+    case "photo-go": history.replaceState(null, "", `#foto/${el.dataset.i}`); render(); break;
+    case "photo-close": if (history.length > 1) history.back(); else go("fotos"); break;
     case "leave": confirm("¿Salir del maratón?", `Solo se quita de este celular. Nada se borra: pueden volver a entrar con el código ${S.code}.`, "Salir", () => { setCode(null); go("hoy"); }); break;
     case "toast-undo": S.toast?.undo?.(); S.toast = null; render(); break;
     case "dlg-cancel": case "dlg-backdrop":
@@ -840,6 +960,7 @@ root.addEventListener("click", (ev) => {
 root.addEventListener("keydown", (ev) => {
   if (ev.key === "Enter" && ev.target.matches?.(".panel.tap")) ev.target.click();
   if (ev.key === "Enter" && ev.target.id === "join-code") joinMarathon();
+  if (ev.key === "Escape" && !S.dialog && route().photoId != null) { history.back(); return; }
   if (ev.key === "Escape" && S.dialog) { if (S.dialog.type === "code") S.createdCode = null; S.dialog = null; render(); }
 });
 
@@ -869,10 +990,10 @@ root.addEventListener("input", (ev) => {
   }
 });
 
-window.addEventListener("hashchange", render);
+window.addEventListener("hashchange", () => { if (!checkJoinLink()) render(); });
 window.addEventListener("online", () => { S.online = true; render(); });
 window.addEventListener("offline", () => { S.online = false; render(); });
 setInterval(() => { const t = todayStr(); if (t !== S.today) { S.today = t; render(); } }, 30000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { S.today = todayStr(); render(); } });
 
-render();
+if (!checkJoinLink()) render();
