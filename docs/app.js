@@ -547,7 +547,8 @@ function gauge(done, total, { size = 150, lit = "#FFC24A", center = "" } = {}) {
 const plural = (n, one, many) => (n === 1 ? one : many);
 /** Nombres antiguos (Cami/Papá) se muestran con los nuevos. */
 function displayName(a) { return a === "Cami" ? "María" : a === "Papá" ? "Mario" : a; }
-const authorColor = (a) => (displayName(a) === "Mario" ? "var(--gold)" : "var(--holo)");
+const AUTHOR_COLORS = { "María": "var(--holo)", "Mario": "var(--gold)", "Mayda": "#FF6B9A" };
+const authorColor = (a) => AUTHOR_COLORS[displayName(a)] || "var(--holo)";
 
 // ======================================================================
 // Pantallas
@@ -580,7 +581,8 @@ function screenAuthor() {
     <h1 class="t-big">¿Quién usa este celular?</h1>
     <p class="muted">Así sabremos quién escribió cada nota. Se puede cambiar después en Ajustes.</p>
     ${btn("Soy María", "author", { tone: "red", size: "lg", data: 'data-v="María"' })}
-    ${btn("Soy Mario", "author", { tone: "gold", size: "lg", data: 'data-v="Mario"' })}</div>`;
+    ${btn("Soy Mario", "author", { tone: "gold", size: "lg", data: 'data-v="Mario"' })}
+    ${btn("Soy Mayda", "author", { tone: "ghost", size: "lg", data: 'data-v="Mayda"' })}</div>`;
 }
 
 function screenLoading() {
@@ -704,7 +706,7 @@ function screenList(ui) {
 }
 
 function screenSettings(ui) {
-  const who = ["María", "Mario"].map((n) => btn(S.author === n ? `✓ ${n}` : n, "author", { tone: S.author === n ? "red" : "ghost", data: `data-v="${n}"` })).join("");
+  const who = ["María", "Mario", "Mayda"].map((n) => btn(S.author === n ? `✓ ${n}` : n, "author", { tone: S.author === n ? "red" : "ghost", size: "md", data: `data-v="${n}"` })).join("");
   const rules = DAY_NAMES.map((d, i) => {
     const v = ui.info.rules[i] ?? 0;
     return `<div class="rule ${v === 0 ? "zero" : ""}"><span class="d">${cap1(d)}</span>
@@ -714,7 +716,7 @@ function screenSettings(ui) {
   }).join("");
   const isDefault = ui.info.rules.join() === DEFAULT_RULES.join();
   return `<div class="page">${header("Ajustes", "Panel de control")}
-    ${panel({ label: "¿Quién usa este celular?" }, `<div class="two">${who}</div>`)}
+    ${panel({ label: "¿Quién usa este celular?" }, `<div class="col">${who}</div>`)}
     ${panel({ label: "Fecha del cine", accent: "gold" }, `
       <p class="t-head gold" style="font-size:26px">${ui.info.cinemaDate ? esc(cap1(longDate(ui.info.cinemaDate, ui.today))) : "Por definir"}</p>
       ${btn(ui.info.cinemaDate ? "Cambiar fecha" : "Elegir fecha", "cinema", { tone: "gold" })}

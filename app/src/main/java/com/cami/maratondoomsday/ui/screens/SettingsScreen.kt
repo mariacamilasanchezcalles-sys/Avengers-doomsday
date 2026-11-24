@@ -3,6 +3,7 @@ package com.cami.maratondoomsday.ui.screens
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -73,14 +74,14 @@ fun SettingsScreen(
         // ---- Quién soy ----
         item {
             HudPanel(label = "¿Quién usa este celular?") {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    listOf("María", "Mario").forEach { name ->
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    listOf("María", "Mario", "Mayda").forEach { name ->
                         val selected = author == name
                         HudButton(
                             if (selected) "✓ $name" else name,
                             onClick = { onAuthor(name) },
                             tone = if (selected) HudTone.Red else HudTone.Ghost,
-                            modifier = Modifier.weight(1f),
+                            minHeight = 56.dp,
                         )
                     }
                 }

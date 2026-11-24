@@ -81,7 +81,11 @@ fun displayName(author: String): String = when (author) {
     else -> author
 }
 
-fun authorColor(author: String): Color = if (displayName(author) == "Mario") Gold else Holo
+fun authorColor(author: String): Color = when (displayName(author)) {
+    "Mario" -> Gold
+    "Mayda" -> Color(0xFFFF6B9A)
+    else -> Holo
+}
 
 /** Ventana emergente con marco HUD. */
 @Composable
