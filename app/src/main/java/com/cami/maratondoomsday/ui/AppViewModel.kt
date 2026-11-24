@@ -10,6 +10,7 @@ import com.cami.maratondoomsday.data.MarathonRepository.MarathonSnapshot
 import com.cami.maratondoomsday.data.Movie
 import com.cami.maratondoomsday.data.Note
 import com.cami.maratondoomsday.data.Prefs
+import com.cami.maratondoomsday.data.connectivityFlow
 import com.cami.maratondoomsday.domain.Scheduler
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -95,6 +96,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Código recién creado, para mostrarlo en un aviso. */
     private val _createdCode = MutableStateFlow<String?>(null)
     val createdCode: StateFlow<String?> = _createdCode.asStateFlow()
+
+    /** Indicador de conexión para el encabezado. */
+    val online: StateFlow<Boolean> = connectivityFlow(app)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
     private val today = flow {
         while (true) {

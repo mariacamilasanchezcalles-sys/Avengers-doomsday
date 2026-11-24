@@ -15,3 +15,6 @@ sincronizada en tiempo real entre dos celulares (Cami y Papá).
 - La agenda se reacomoda sola si un día no se vio la película.
 
 Kotlin · Jetpack Compose · Material 3 · Firebase Firestore (offline) · minSdk 26
+
+Interfaz estilo HUD de laboratorio (paneles con esquinas cortadas, rejilla holográfica, medidor radial).
+Fuentes: Rajdhani, Orbitron y Share Tech Mono, bajo licencia SIL OFL (ver `docs/licencias-fuentes/`).

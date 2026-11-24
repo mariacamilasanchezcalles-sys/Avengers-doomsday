@@ -1,25 +1,28 @@
 package com.cami.maratondoomsday.ui.screens
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,21 +36,62 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cami.maratondoomsday.data.MarathonRepository
+import com.cami.maratondoomsday.ui.hud.HudBackground
+import com.cami.maratondoomsday.ui.hud.HudButton
+import com.cami.maratondoomsday.ui.hud.HudLabel
+import com.cami.maratondoomsday.ui.hud.HudPanel
+import com.cami.maratondoomsday.ui.hud.HudTone
+import com.cami.maratondoomsday.ui.hud.RadialGauge
+import com.cami.maratondoomsday.ui.hud.chamfer
+import com.cami.maratondoomsday.ui.hud.hudFieldColors
+import com.cami.maratondoomsday.ui.hud.hudFieldShape
+import com.cami.maratondoomsday.ui.theme.Gold
+import com.cami.maratondoomsday.ui.theme.Holo
+import com.cami.maratondoomsday.ui.theme.Mono
+import com.cami.maratondoomsday.ui.theme.Orbitron
+import com.cami.maratondoomsday.ui.theme.StarkRed
+import com.cami.maratondoomsday.ui.theme.TextHi
+import com.cami.maratondoomsday.ui.theme.TextLo
 
 @Composable
 private fun CenteredPage(content: @Composable () -> Unit) {
-    Scaffold { padding ->
+    HudBackground {
         Column(
             Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .safeDrawingPadding()
                 .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+            verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) { content() }
     }
+}
+
+/** Anillo que se va encendiendo en ciclo, como si el sistema estuviera arrancando. */
+@Composable
+private fun BootEmblem(text: String) {
+    val t = rememberInfiniteTransition(label = "arranque")
+    val p by t.animateFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "carga")
+    val segments = 12
+    RadialGauge(done = (p * (segments + 1)).toInt(), total = segments, size = 170.dp, litColor = Holo) {
+        Text(text, fontFamily = Orbitron, fontWeight = FontWeight.Black, fontSize = 26.sp, color = Gold)
+    }
+}
+
+/** Texto de consola con cursor parpadeante. */
+@Composable
+private fun ConsoleLine(text: String) {
+    val t = rememberInfiniteTransition(label = "cursor")
+    val a by t.animateFloat(1f, 0f, infiniteRepeatable(tween(600), RepeatMode.Reverse), label = "alfa")
+    Text(
+        "> ${text.uppercase()}" + if (a > 0.5f) "_" else " ",
+        fontFamily = Mono,
+        fontSize = 14.sp,
+        letterSpacing = 1.5.sp,
+        color = Holo,
+    )
 }
 
 @Composable
@@ -61,52 +105,58 @@ fun SetupScreen(
     var code by rememberSaveable { mutableStateOf("") }
 
     CenteredPage {
-        Text("🍿🎬", fontSize = 56.sp)
+        BootEmblem("MD")
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            HudLabel("Sistema de maratón · v1.0", color = Holo, size = 13.sp)
+            Text(
+                "PROTOCOLO\nDOOMSDAY",
+                fontFamily = Orbitron,
+                fontWeight = FontWeight.Black,
+                fontSize = 34.sp,
+                lineHeight = 40.sp,
+                letterSpacing = 3.sp,
+                color = Gold,
+                textAlign = TextAlign.Center,
+            )
+        }
         Text(
-            "Maratón rumbo a\nDOOMSDAY",
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Black,
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            "Para que los dos celulares vean lo mismo, uno crea el maratón y el otro se une con el código.",
+            "Maratón rumbo al cine. Un celular crea el maratón y el otro se une con el código.",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = TextLo,
         )
-        Spacer(Modifier.height(8.dp))
 
         if (!joining) {
-            BigButton("Crear maratón", onClick = onCreate, enabled = !busy)
-            BigButton(
-                "Unirse con código",
-                onClick = { joining = true },
-                enabled = !busy,
-                container = MaterialTheme.colorScheme.secondary,
-                content = MaterialTheme.colorScheme.onSecondary,
-            )
+            HudButton("Crear maratón", onClick = onCreate, enabled = !busy, tone = HudTone.Red, minHeight = 70.dp)
+            HudButton("Unirse con código", onClick = { joining = true }, enabled = !busy, tone = HudTone.Gold, minHeight = 70.dp)
         } else {
-            OutlinedTextField(
-                value = code,
-                onValueChange = { code = MarathonRepository.normalizeCode(it) },
-                label = { Text("Código de 6 caracteres") },
-                singleLine = true,
-                textStyle = MaterialTheme.typography.headlineMedium.copy(
-                    textAlign = TextAlign.Center, letterSpacing = 6.sp, fontWeight = FontWeight.Bold,
-                ),
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            BigButton("Unirme", onClick = { onJoin(code) }, enabled = !busy && code.length == 6)
-            TextButton(onClick = { joining = false }) {
-                Text("← Regresar", style = MaterialTheme.typography.titleMedium)
+            HudPanel(label = "Código de acceso", accent = Gold) {
+                OutlinedTextField(
+                    value = code,
+                    onValueChange = { code = MarathonRepository.normalizeCode(it) },
+                    placeholder = {
+                        Text("······", fontFamily = Orbitron, fontSize = 30.sp, letterSpacing = 8.sp, color = TextLo, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                    },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.displaySmall.copy(
+                        textAlign = TextAlign.Center, letterSpacing = 8.sp, color = Gold,
+                    ),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                    shape = hudFieldShape,
+                    colors = hudFieldColors(),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                HudButton("Unirme", onClick = { onJoin(code) }, enabled = !busy && code.length == 6, tone = HudTone.Gold)
+                HudButton("Regresar", onClick = { joining = false }, tone = HudTone.Ghost, minHeight = 52.dp, textSize = 18.sp)
             }
         }
 
-        if (busy) CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
-        error?.let {
-            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+        when {
+            busy -> ConsoleLine("Conectando con la base de datos")
+            error != null -> HudPanel(label = "Error", accent = StarkRed, blinkLabel = true) {
+                Text(error, color = TextHi, style = MaterialTheme.typography.bodyLarge)
+            }
+            else -> ConsoleLine("Esperando instrucciones")
         }
     }
 }
@@ -114,39 +164,35 @@ fun SetupScreen(
 @Composable
 fun ChooseAuthorScreen(onChoose: (String) -> Unit) {
     CenteredPage {
-        Text("👋", fontSize = 56.sp)
+        HudLabel("Identificación", color = Holo)
         Text(
             "¿Quién usa este celular?",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineLarge,
+            color = TextHi,
             textAlign = TextAlign.Center,
         )
         Text(
             "Así sabremos quién escribió cada nota. Se puede cambiar después en Ajustes.",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = TextLo,
         )
-        BigButton("👧  Soy Cami", onClick = { onChoose("Cami") })
-        BigButton(
-            "👨  Soy Papá",
-            onClick = { onChoose("Papá") },
-            container = MaterialTheme.colorScheme.secondary,
-            content = MaterialTheme.colorScheme.onSecondary,
-        )
+        HudButton("Soy Cami", onClick = { onChoose("Cami") }, tone = HudTone.Red, minHeight = 76.dp, textSize = 26.sp)
+        HudButton("Soy Papá", onClick = { onChoose("Papá") }, tone = HudTone.Gold, minHeight = 76.dp, textSize = 26.sp)
     }
 }
 
 @Composable
 fun LoadingScreen(error: String?, onRetry: () -> Unit, onLeave: () -> Unit) {
     CenteredPage {
-        CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
-        Text("Cargando el maratón…", style = MaterialTheme.typography.titleLarge)
+        BootEmblem("···")
+        ConsoleLine("Sincronizando maratón")
         if (error != null) {
-            Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
-            BigButton("Reintentar", onClick = onRetry)
-            HorizontalDivider()
-            TextButton(onClick = onLeave) { Text("Usar otro código", style = MaterialTheme.typography.titleMedium) }
+            HudPanel(label = "Sin conexión", accent = StarkRed, blinkLabel = true) {
+                Text(error, color = TextHi, style = MaterialTheme.typography.bodyLarge)
+            }
+            HudButton("Reintentar", onClick = onRetry)
+            HudButton("Usar otro código", onClick = onLeave, tone = HudTone.Ghost, minHeight = 52.dp, textSize = 18.sp)
         }
     }
 }
@@ -154,63 +200,52 @@ fun LoadingScreen(error: String?, onRetry: () -> Unit, onLeave: () -> Unit) {
 @Composable
 fun NotFoundScreen(onLeave: () -> Unit) {
     CenteredPage {
-        Text("🤔", fontSize = 56.sp)
-        Text(
-            "Ya no encontramos este maratón.",
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center,
-        )
-        BigButton("Crear o unirse a otro", onClick = onLeave)
+        HudPanel(label = "Maratón no encontrado", accent = StarkRed, blinkLabel = true) {
+            Text("Ya no encontramos este maratón.", style = MaterialTheme.typography.headlineSmall, color = TextHi)
+        }
+        HudButton("Crear o unirse a otro", onClick = onLeave)
     }
 }
 
 @Composable
 fun CodeCreatedDialog(code: String, onShare: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("¡Maratón creado! 🎉") },
-        text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Text("Este es su código:", style = MaterialTheme.typography.bodyLarge)
-                Box(Modifier.padding(vertical = 12.dp)) {
-                    Text(
-                        code,
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 6.sp,
-                        color = MaterialTheme.colorScheme.secondary,
-                    )
-                }
-                Text(
-                    "En el otro celular, elige “Unirse con código” y escríbelo. También lo puedes ver en Ajustes.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                )
-            }
+    HudDialog(
+        title = "Maratón creado",
+        onDismiss = onDismiss,
+        accent = Gold,
+        buttons = {
+            HudButton("Compartir código", onClick = onShare, tone = HudTone.Gold, icon = Icons.Filled.Share, minHeight = 56.dp)
+            HudButton("Entendido", onClick = onDismiss, tone = HudTone.Ghost, minHeight = 56.dp)
         },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Entendido", style = MaterialTheme.typography.titleMedium) }
-        },
-        dismissButton = {
-            TextButton(onClick = onShare) { Text("Compartir", style = MaterialTheme.typography.titleMedium) }
-        },
-    )
+    ) {
+        Text("Este es su código de acceso:", style = MaterialTheme.typography.bodyLarge, color = TextLo)
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .border(1.dp, Gold.copy(alpha = 0.5f), chamfer(10.dp))
+                .padding(vertical = 14.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(code, fontFamily = Orbitron, fontWeight = FontWeight.Black, fontSize = 36.sp, letterSpacing = 8.sp, color = Gold)
+        }
+        Text(
+            "En el otro celular, elige “Unirse con código” y escríbelo. También lo puedes ver en Ajustes.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = TextHi,
+        )
+    }
 }
 
 @Composable
 fun MissingConfigScreen() {
     CenteredPage {
-        Text("⚙️", fontSize = 56.sp)
-        Text(
-            "Falta configurar Firebase",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            "Este APK se compiló sin el archivo google-services.json. Sigue la guía (GUIA.md) para agregarlo y vuelve a compilar.",
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-        )
+        HudPanel(label = "Configuración incompleta", accent = StarkRed, blinkLabel = true) {
+            Text("Falta configurar Firebase", style = MaterialTheme.typography.headlineSmall, color = TextHi)
+            Text(
+                "Este APK se compiló sin el archivo google-services.json. Sigue la guía (GUIA.md) para agregarlo y vuelve a compilar.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = TextLo,
+            )
+        }
     }
 }

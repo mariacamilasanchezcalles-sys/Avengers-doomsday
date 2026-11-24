@@ -11,14 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -31,7 +25,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.cami.maratondoomsday.data.Movie
@@ -48,6 +42,10 @@ import com.cami.maratondoomsday.ui.screens.NotFoundScreen
 import com.cami.maratondoomsday.ui.screens.SettingsScreen
 import com.cami.maratondoomsday.ui.screens.SetupScreen
 import com.cami.maratondoomsday.ui.screens.TodayScreen
+import com.cami.maratondoomsday.ui.hud.HudBackground
+import com.cami.maratondoomsday.ui.hud.HudNavBar
+import com.cami.maratondoomsday.ui.hud.HudTab
+import com.cami.maratondoomsday.ui.screens.HudSnackbarHost
 import com.cami.maratondoomsday.ui.theme.MaratonTheme
 import com.google.firebase.FirebaseApp
 import kotlinx.coroutines.launch
@@ -105,6 +103,7 @@ private fun MainScreen(ui: MarathonUi, author: String?, vm: AppViewModel) {
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val online by vm.online.collectAsStateWithLifecycle()
 
     // Marca como vista y ofrece "Deshacer" por si se presionó sin querer.
     val markWatched: (Movie) -> Unit = { movie ->
@@ -143,58 +142,48 @@ private fun MainScreen(ui: MarathonUi, author: String?, vm: AppViewModel) {
     }
 
     val tabs = listOf(
-        Triple("Hoy", Icons.Filled.Home, 0),
-        Triple("Lista", Icons.AutoMirrored.Filled.List, 1),
-        Triple("Ajustes", Icons.Filled.Settings, 2),
+        HudTab("Hoy", Icons.Filled.Home),
+        HudTab("Lista", Icons.AutoMirrored.Filled.List),
+        HudTab("Ajustes", Icons.Filled.Settings),
     )
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbar) },
-        bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                tabs.forEach { (label, icon, index) ->
-                    NavigationBarItem(
-                        selected = tab == index,
-                        onClick = { tab = index },
-                        icon = { Icon(icon, contentDescription = label) },
-                        label = { Text(label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                            indicatorColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.secondary,
-                        ),
-                    )
-                }
+    HudBackground {
+        Scaffold(
+            containerColor = Color.Transparent,
+            snackbarHost = { HudSnackbarHost(snackbar) },
+            bottomBar = { HudNavBar(tabs, tab, onSelect = { tab = it }) },
+        ) { padding ->
+            when (tab) {
+                0 -> TodayScreen(
+                    ui = ui,
+                    online = online,
+                    contentPadding = padding,
+                    onWatched = markWatched,
+                    onOpenMovie = { openMovieId = it },
+                    onAddNote = vm::addNote,
+                    onEditNote = vm::updateNote,
+                    onDeleteNote = vm::deleteNote,
+                )
+                1 -> ListScreen(
+                    ui = ui,
+                    online = online,
+                    contentPadding = padding,
+                    onOpenMovie = { openMovieId = it },
+                    onMove = { index, delta -> vm.moveInList(ui.items.map { it.movie }, index, delta) },
+                    onAdd = { t, y, d, w -> vm.addMovie(t, y, d, w, ui.items.maxOfOrNull { it.movie.order } ?: 0L) },
+                )
+                else -> SettingsScreen(
+                    ui = ui,
+                    author = author,
+                    online = online,
+                    contentPadding = padding,
+                    onAuthor = vm::setAuthor,
+                    onCinemaDate = vm::setCinemaDate,
+                    onRules = vm::setRules,
+                    onShareCode = { shareCode(context, ui.info.code) },
+                    onLeave = vm::leaveMarathon,
+                )
             }
-        },
-    ) { padding ->
-        when (tab) {
-            0 -> TodayScreen(
-                ui = ui,
-                contentPadding = padding,
-                onWatched = markWatched,
-                onOpenMovie = { openMovieId = it },
-                onAddNote = vm::addNote,
-                onEditNote = vm::updateNote,
-                onDeleteNote = vm::deleteNote,
-            )
-            1 -> ListScreen(
-                ui = ui,
-                contentPadding = padding,
-                onOpenMovie = { openMovieId = it },
-                onMove = { index, delta -> vm.moveInList(ui.items.map { it.movie }, index, delta) },
-                onAdd = { t, y, d, w -> vm.addMovie(t, y, d, w, ui.items.maxOfOrNull { it.movie.order } ?: 0L) },
-            )
-            else -> SettingsScreen(
-                ui = ui,
-                author = author,
-                contentPadding = padding,
-                onAuthor = vm::setAuthor,
-                onCinemaDate = vm::setCinemaDate,
-                onRules = vm::setRules,
-                onShareCode = { shareCode(context, ui.info.code) },
-                onLeave = vm::leaveMarathon,
-            )
         }
     }
 }

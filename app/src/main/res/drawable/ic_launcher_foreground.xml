@@ -3,7 +3,28 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Anillo exterior segmentado (holograma) -->
     <path
-        android:fillColor="#F2C14E"
-        android:pathData="M54.00,26.00 L61.35,45.89 L82.53,46.73 L65.89,59.86 L71.63,80.27 L54.00,68.50 L36.37,80.27 L42.11,59.86 L25.47,46.73 L46.65,45.89 Z" />
+        android:strokeColor="#5CE1FF"
+        android:strokeWidth="2.5"
+        android:fillColor="#00000000"
+        android:pathData="M54,24 A30,30 0,0,1 84,54 M84,54 A30,30 0,0,1 54,84 M54,84 A30,30 0,0,1 24,54 M24,54 A30,30 0,0,1 54,24" />
+    <!-- Anillo dorado -->
+    <path
+        android:strokeColor="#FFC24A"
+        android:strokeWidth="5"
+        android:fillColor="#00000000"
+        android:pathData="M54,31 A23,23 0,1,1 53.99,31 Z" />
+    <!-- Hexágono central rojo -->
+    <path
+        android:fillColor="#E4252F"
+        android:pathData="M54,40 L66.1,47 L66.1,61 L54,68 L41.9,61 L41.9,47 Z" />
+    <path
+        android:fillColor="#FFE3A3"
+        android:pathData="M54,48 L59.2,51 L59.2,57 L54,60 L48.8,57 L48.8,51 Z" />
+    <!-- Marcas -->
+    <path android:fillColor="#5CE1FF" android:pathData="M52.5,18 h3 v6 h-3 Z" />
+    <path android:fillColor="#5CE1FF" android:pathData="M52.5,84 h3 v6 h-3 Z" />
+    <path android:fillColor="#5CE1FF" android:pathData="M18,52.5 v3 h6 v-3 Z" />
+    <path android:fillColor="#5CE1FF" android:pathData="M84,52.5 v3 h6 v-3 Z" />
 </vector>
